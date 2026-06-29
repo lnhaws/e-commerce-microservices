@@ -3,23 +3,24 @@ package com.rainbowforest.productcatalogservice.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+// import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
 
-@Service
+// @Service
 public class CloudinaryService {
 
-    @Autowired
+    // @Autowired
     private Cloudinary cloudinary;
 
     public String uploadImage(MultipartFile file) throws IOException {
-        // Hàm upload() sẽ ném file lên mây và trả về một Map chứa các thông tin của ảnh
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+        // // Hàm upload() sẽ ném file lên mây và trả về một Map chứa các thông tin của ảnh
+        // Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         
-        // Trích xuất cái đường link ảnh (https://...) để lát nữa lưu vào Database
-        return uploadResult.get("secure_url").toString();
+        // // Trích xuất cái đường link ảnh (https://...) để lát nữa lưu vào Database
+        // return uploadResult.get("secure_url").toString();
+        return null;
     }
 }
