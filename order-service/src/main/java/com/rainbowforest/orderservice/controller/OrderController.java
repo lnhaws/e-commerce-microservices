@@ -123,23 +123,22 @@ public class OrderController {
         return new ResponseEntity<Void>(HttpStatus.NOT_FOUND);
     }
 
-    @GetMapping(value = "/orders")
+   @GetMapping(value = "/orders")
     public ResponseEntity<List<OrderResponseDTO>> getAllOrders() {
         try {
-            // Gọi hàm getAllOrderDetails mới
             List<OrderResponseDTO> orders = orderService.getAllOrderDetails();
-            if (orders != null && !orders.isEmpty()) {
-                return new ResponseEntity<List<OrderResponseDTO>>(
-                        orders,
-                        headerGenerator.getHeadersForSuccessGetMethod(),
-                        HttpStatus.OK);
-            }
+            
+            return new ResponseEntity<List<OrderResponseDTO>>(
+                    orders != null ? orders : java.util.Collections.emptyList(), 
+                    headerGenerator.getHeadersForSuccessGetMethod(), 
+                    HttpStatus.OK);
+                    
         } catch (Exception e) {
             e.printStackTrace();
-            return new ResponseEntity<List<OrderResponseDTO>>(headerGenerator.getHeadersForError(),
+            return new ResponseEntity<List<OrderResponseDTO>>(
+                    headerGenerator.getHeadersForError(), 
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<List<OrderResponseDTO>>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
     }
 
     @GetMapping(value = "/order/user/{userId}")
