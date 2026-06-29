@@ -21,7 +21,10 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import java.util.ArrayList;
 import java.util.List;
-import static org.mockito.ArgumentMatchers.anyString;
+
+// Đổi từ anyString sang anyLong
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,9 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
-@SpringBootTest(properties = {
-
-})
+@SpringBootTest
 public class RecommendationControllerTests {
 
     private final Long PRODUCT_ID = 1L;
@@ -63,64 +64,62 @@ public class RecommendationControllerTests {
         user.setUserName(USER_NAME);
         product = new Product();
         product.setProductName(PRODUCT_NAME);
+        
         recommendation = new Recommendation();
         recommendation.setId(RECOMMENDATION_ID);
-        recommendation.setUser(user);
-        recommendation.setProduct(product);
+        recommendation.setUserId(USER_ID);
+        recommendation.setProductId(PRODUCT_ID);
         recommendation.setRating(RATING);
+        
         recommendations = new ArrayList<>();
         recommendations.add(recommendation);
     }
 
     @Test
     public void get_all_rating_controller_should_return200_when_validRequest() throws Exception {
-    	//when
-        when(recommendationService.getAllRecommendationByProductName(anyString())).thenReturn(recommendations);
+        // Gọi hàm mới: getAllRecommendationByProductId
+        when(recommendationService.getAllRecommendationByProductId(anyLong())).thenReturn(recommendations);
 
-        //then
-        mockMvc.perform(get("/recommendations").param("name", PRODUCT_NAME))
+        // Đổi param từ "name" sang "productId"
+        mockMvc.perform(get("/recommendations").param("productId", String.valueOf(PRODUCT_ID)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(jsonPath("$[0].id").value(RECOMMENDATION_ID))
                 .andExpect(jsonPath("$[0].rating").value(RATING))
-                .andExpect(jsonPath("$[0].product.productName").value(PRODUCT_NAME))
-                .andExpect(jsonPath("$[0].user.userName").value(USER_NAME));
+                .andExpect(jsonPath("$[0].productId").value(PRODUCT_ID.intValue()))
+                .andExpect(jsonPath("$[0].userId").value(USER_ID.intValue()));
               
-        verify(recommendationService, times(1)).getAllRecommendationByProductName(anyString());
+        verify(recommendationService, times(1)).getAllRecommendationByProductId(anyLong());
         verifyNoMoreInteractions(recommendationService);
     }
     
     @Test
     public void get_all_rating_controller_should_return404_when_recommendationList_isEmpty() throws Exception {
-    	//given
-    	List<Recommendation> recommendations = new ArrayList<Recommendation>();
-    	
-    	//when
-    	when(recommendationService.getAllRecommendationByProductName(anyString())).thenReturn(recommendations);
+        List<Recommendation> emptyRecommendations = new ArrayList<Recommendation>();
+        
+        // Gọi hàm mới: getAllRecommendationByProductId
+        when(recommendationService.getAllRecommendationByProductId(anyLong())).thenReturn(emptyRecommendations);
 
-        //then
-        mockMvc.perform(get("/recommendations").param("name", PRODUCT_NAME))
+        // Đổi param từ "name" sang "productId"
+        mockMvc.perform(get("/recommendations").param("productId", String.valueOf(PRODUCT_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON_UTF8_VALUE));
                           
-        verify(recommendationService, times(1)).getAllRecommendationByProductName(anyString());
+        verify(recommendationService, times(1)).getAllRecommendationByProductId(anyLong());
         verifyNoMoreInteractions(recommendationService);
     }
 
     @Test
     public void save_recommendations_controller_should_return201_when_user_is_saved() throws Exception {
-    	//given
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
         ObjectWriter objectWriter = mapper.writer().withDefaultPrettyPrinter();
         String requestJson = objectWriter.writeValueAsString(recommendation);
         
-        //when
         when(productClient.getProductById(PRODUCT_ID)).thenReturn(product);
         when(userClient.getUserById(USER_ID)).thenReturn(user);
         when(recommendationService.saveRecommendation(any(Recommendation.class))).thenReturn(recommendation);
         
-        //then
         mockMvc.perform(post("/{userId}/recommendations/{productId}",USER_ID, PRODUCT_ID).param("rating", RATING.toString()).content(requestJson).contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))

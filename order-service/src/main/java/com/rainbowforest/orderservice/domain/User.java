@@ -1,12 +1,13 @@
 package com.rainbowforest.orderservice.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table (name = "users")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
 
     @Id
@@ -17,9 +18,13 @@ public class User {
     @NotNull
     private String userName;
 
-    @OneToMany (mappedBy = "user")
-    @JsonIgnore
-    private List<Order> orders;
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getUserName() {
         return userName;
@@ -27,13 +32,5 @@ public class User {
 
     public void setUserName(String userName) {
         this.userName = userName;
-    }
-
-    public List<Order> getOrders() {
-        return orders;
-    }
-
-    public void setOrders(List<Order> orders) {
-        this.orders = orders;
     }
 }

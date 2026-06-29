@@ -13,6 +13,6 @@ import java.util.List;
 @Transactional
 public interface RecommendationRepository extends JpaRepository<Recommendation, Long> {
 
-    @Query("select r FROM Recommendation r WHERE r.product.productName = :productName")
-    public List<Recommendation> findAllRatingByProductName(@Param("productName") String productName);
+    @Query("select r FROM Recommendation r WHERE r.productId = :productId")
+    public List<Recommendation> findAllRatingByProductId(@Param("productId") Long productId);
 }

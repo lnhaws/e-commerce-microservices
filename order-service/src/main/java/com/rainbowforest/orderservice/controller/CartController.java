@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Collections; // 🌟 Thêm import này để dùng Collections.singletonMap
+import java.util.Collections; 
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
@@ -22,15 +22,11 @@ public class CartController {
     @GetMapping (value = "/cart")
     public ResponseEntity<List<Object>> getCart(@RequestHeader(value = "Cart-Id") String cartId){
         List<Object> cart = cartService.getCart(cartId);
-        if(!cart.isEmpty()) {
-            return new ResponseEntity<List<Object>>(
-                    cart,
-                    headerGenerator.getHeadersForSuccessGetMethod(),
-                    HttpStatus.OK);
-        }
+        
         return new ResponseEntity<List<Object>>(
-                headerGenerator.getHeadersForError(),
-                HttpStatus.NOT_FOUND);  
+                cart,
+                headerGenerator.getHeadersForSuccessGetMethod(),
+                HttpStatus.OK);
     }
 
     @PostMapping(value = "/cart", params = {"productId", "quantity"})
@@ -39,20 +35,22 @@ public class CartController {
             @RequestParam("quantity") Integer quantity,
             @RequestHeader(value = "Cart-Id") String cartId,
             HttpServletRequest request) {
+        
         List<Object> cart = cartService.getCart(cartId);
         if(cart != null) {
             if(cart.isEmpty()){
                 cartService.addItemToCart(cartId, productId, quantity);
-            }else{
+            } else {
                 if(cartService.checkIfItemIsExist(cartId, productId)){
                     // Dùng hàm cộng dồn thay vì ghi đè
                     cartService.accumulateItemQuantity(cartId, productId, quantity);
-                }else {
+                } else {
                     cartService.addItemToCart(cartId, productId, quantity);
                 }
             }
+            
             return new ResponseEntity<List<Object>>(
-                    cart,
+                    cartService.getCart(cartId),
                     headerGenerator.getHeadersForSuccessPostMethod(request, Long.parseLong(cartId)),
                     HttpStatus.CREATED);
         }
@@ -77,9 +75,6 @@ public class CartController {
                 HttpStatus.NOT_FOUND);
     }
 
-    // ----------------------------------------------------
-    // HÀM MỚI BỔ SUNG: GỘP GIỎ HÀNG GUEST VÀO USER
-    // ----------------------------------------------------
     @PostMapping(value = "/cart/merge")
     public ResponseEntity<?> mergeCart(
             @RequestParam("guestCartId") String guestCartId,

@@ -44,62 +44,62 @@ public class OrderControllerTest {
     private static final String USER_NAME = "Test";
     private static final String CART_ID = "1";
     Cookie mockCookie = Mockito.mock(Cookie.class);
-	
+    
     @Autowired
     private MockMvc mockMvc;
     
-	@MockBean
-	private UserClient userClient;
-	
-	@MockBean
-	private OrderService orderService;
-	
-	@MockBean
-	private CartService cartService;
-	
-	@Autowired
-	private WebApplicationContext webApplicationContext;
+    @MockBean
+    private UserClient userClient;
+    
+    @MockBean
+    private OrderService orderService;
+    
+    @MockBean
+    private CartService cartService;
+    
+    @Autowired
+    private WebApplicationContext webApplicationContext;
 
-	@Before()
-	public void setup()
-	{
-	    mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-	}
-	
-	@Test
-	public void save_order_controller_should_return201_when_valid_request() throws Exception {
-		//given
-		Product product = new Product();
-		product.setId(PRODUCT_ID);
-		product.setProductName(PRODUCT_NAME);
-		
-		User user = new User();
-		user.setUserName(USER_NAME);
-				
-		Item item = new Item();
-		item.setProduct(product);
-		item.setQuantity(1);
-		List<Item> cart = new ArrayList<Item>();
-		cart.add(item);
-		
-		Order order = new Order();
-		order.setItems(cart);
-		order.setUser(user);
-		
-		Cookie cookie = new Cookie("cartId", CART_ID);
-		
-		//when
-		when(cartService.getAllItemsFromCart(CART_ID)).thenReturn(cart);
-		when(userClient.getUserById(USER_ID)).thenReturn(user);
-		when(orderService.saveOrder(new Order())).thenReturn(order);
-		//then
-		
-		mockMvc.perform(post("/order/{userId}", USER_ID).cookie(new Cookie[] {cookie}))
+    @Before()
+    public void setup()
+    {
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
+    
+    @Test
+    public void save_order_controller_should_return201_when_valid_request() throws Exception {
+        //given
+        Product product = new Product();
+        product.setId(PRODUCT_ID);
+        product.setProductName(PRODUCT_NAME);
+        
+        User user = new User();
+        user.setUserName(USER_NAME);
+                
+        Item item = new Item();
+        item.setProductId(PRODUCT_ID); // Fix test: gán ID
+        item.setQuantity(1);
+        List<Item> cart = new ArrayList<Item>();
+        cart.add(item);
+        
+        Order order = new Order();
+        order.setItems(cart);
+        order.setUserId(USER_ID); // Fix test: gán ID
+        
+        Cookie cookie = new Cookie("cartId", CART_ID);
+        
+        //when
+        when(cartService.getAllItemsFromCart(CART_ID)).thenReturn(cart);
+        when(userClient.getUserById(USER_ID)).thenReturn(user);
+        when(orderService.saveOrder(any(Order.class))).thenReturn(order);
+        
+        //then
+        mockMvc.perform(post("/order/{userId}", USER_ID).cookie(new Cookie[] {cookie}))
         .andExpect(status().isCreated())
         .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
         .andExpect(jsonPath("$.items").isArray());
 
-		verify(orderService, times(1)).saveOrder(any(Order.class));
-		verifyNoMoreInteractions(orderService);
-	}
+        verify(orderService, times(1)).saveOrder(any(Order.class));
+        verifyNoMoreInteractions(orderService);
+    }
 }

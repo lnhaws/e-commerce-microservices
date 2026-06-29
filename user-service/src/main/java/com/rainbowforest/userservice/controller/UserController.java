@@ -17,35 +17,34 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private HeaderGenerator headerGenerator;
 
     @Autowired
-    private UserRoleRepository userRoleRepository; 
-    
-    @GetMapping (value = "/users")
-    public ResponseEntity<List<User>> getAllUsers(){
-        List<User> users =  userService.getAllUsers();
-        if(!users.isEmpty()) {
+    private UserRoleRepository userRoleRepository;
+
+    @GetMapping(value = "/users")
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        if (!users.isEmpty()) {
             return new ResponseEntity<List<User>>(
-                users,
-                headerGenerator.getHeadersForSuccessGetMethod(),
-                HttpStatus.OK);
+                    users,
+                    headerGenerator.getHeadersForSuccessGetMethod(),
+                    HttpStatus.OK);
         }
         return new ResponseEntity<List<User>>(
                 headerGenerator.getHeadersForError(),
                 HttpStatus.NOT_FOUND);
     }
 
-    @GetMapping (value = "/users", params = "name")
-    public ResponseEntity<User> getUserByName(@RequestParam("name") String userName){
+    @GetMapping(value = "/users", params = "name")
+    public ResponseEntity<User> getUserByName(@RequestParam("name") String userName) {
         User user = userService.getUserByName(userName);
-        if(user != null) {
+        if (user != null) {
             return new ResponseEntity<User>(
                     user,
-                    headerGenerator.
-                    getHeadersForSuccessGetMethod(),
+                    headerGenerator.getHeadersForSuccessGetMethod(),
                     HttpStatus.OK);
         }
         return new ResponseEntity<User>(
@@ -53,14 +52,13 @@ public class UserController {
                 HttpStatus.NOT_FOUND);
     }
 
-    @GetMapping (value = "/users/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable("id") Long id){
+    @GetMapping(value = "/users/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable("id") Long id) {
         User user = userService.getUserById(id);
-        if(user != null) {
+        if (user != null) {
             return new ResponseEntity<User>(
                     user,
-                    headerGenerator.
-                    getHeadersForSuccessGetMethod(),
+                    headerGenerator.getHeadersForSuccessGetMethod(),
                     HttpStatus.OK);
         }
         return new ResponseEntity<User>(
@@ -68,25 +66,25 @@ public class UserController {
                 HttpStatus.NOT_FOUND);
     }
 
-    @PostMapping (value = "/users")
-    public ResponseEntity<User> addUser(@RequestBody User user, HttpServletRequest request){
-        if(user != null)
+    @PostMapping(value = "/users")
+    public ResponseEntity<User> addUser(@RequestBody User user, HttpServletRequest request) {
+        if (user != null)
             try {
                 if (user.getRole() != null && user.getRole().getId() != null) {
                     UserRole realRole = userRoleRepository.findById(user.getRole().getId()).orElse(null);
                     user.setRole(realRole);
                 }
                 // --------------------------------
-                
+
                 userService.saveUser(user);
                 return new ResponseEntity<User>(
                         user,
                         headerGenerator.getHeadersForSuccessPostMethod(request, user.getId()),
                         HttpStatus.CREATED);
-            }catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 return new ResponseEntity<User>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+            }
         return new ResponseEntity<User>(HttpStatus.BAD_REQUEST);
     }
 
@@ -98,7 +96,7 @@ public class UserController {
                 // Xóa mềm: Chỉ chuyển active = 0 (Khóa tài khoản)
                 user.setActive(0);
                 userService.saveUser(user);
-                
+
                 return new ResponseEntity<Void>(
                         headerGenerator.getHeadersForSuccessGetMethod(),
                         HttpStatus.OK);
@@ -113,13 +111,14 @@ public class UserController {
     }
 
     @PutMapping(value = "/users/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable("id") Long id, @RequestBody User userDetails, HttpServletRequest request) {
+    public ResponseEntity<User> updateUser(@PathVariable("id") Long id, @RequestBody User userDetails,
+            HttpServletRequest request) {
         User existingUser = userService.getUserById(id);
         if (existingUser != null) {
             try {
                 // 1. CHỈ CẬP NHẬT TRẠNG THÁI (Khóa / Mở khóa tài khoản)
                 existingUser.setActive(userDetails.getActive());
-                
+
                 // 2. CHỈ CẬP NHẬT QUYỀN (Phân quyền nhân viên / khách hàng)
                 // --- FIX LỖI ROLE_ID BỊ NULL ---
                 if (userDetails.getRole() != null && userDetails.getRole().getId() != null) {
@@ -127,7 +126,47 @@ public class UserController {
                     existingUser.setRole(realRole);
                 }
                 userService.saveUser(existingUser);
-                
+
+                return new ResponseEntity<User>(
+                        existingUser,
+                        headerGenerator.getHeadersForSuccessPostMethod(request, existingUser.getId()),
+                        HttpStatus.OK);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new ResponseEntity<User>(headerGenerator.getHeadersForError(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+        return new ResponseEntity<User>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
+    }
+
+    // 🌟 API DÀNH RIÊNG CHO USER: CẬP NHẬT THÔNG TIN CÁ NHÂN (PROFILE)
+    @PutMapping(value = "/users/{id}/profile")
+    public ResponseEntity<User> updateUserProfile(
+            @PathVariable("id") Long id,
+            @RequestBody com.rainbowforest.userservice.entity.UserDetails profileDetails,
+            HttpServletRequest request) {
+
+        User existingUser = userService.getUserById(id);
+        if (existingUser != null) {
+            try {
+                com.rainbowforest.userservice.entity.UserDetails currentDetails = existingUser.getUserDetails();
+                if (currentDetails == null) {
+                    currentDetails = new com.rainbowforest.userservice.entity.UserDetails();
+                }
+
+                currentDetails.setFirstName(profileDetails.getFirstName());
+                currentDetails.setLastName(profileDetails.getLastName());
+                currentDetails.setEmail(profileDetails.getEmail());
+                currentDetails.setPhoneNumber(profileDetails.getPhoneNumber());
+                currentDetails.setStreet(profileDetails.getStreet());
+                currentDetails.setStreetNumber(profileDetails.getStreetNumber());
+                currentDetails.setZipCode(profileDetails.getZipCode());
+                currentDetails.setLocality(profileDetails.getLocality());
+                currentDetails.setCountry(profileDetails.getCountry());
+
+                existingUser.setUserDetails(currentDetails);
+                userService.saveUser(existingUser);
+
                 return new ResponseEntity<User>(
                         existingUser,
                         headerGenerator.getHeadersForSuccessPostMethod(request, existingUser.getId()),

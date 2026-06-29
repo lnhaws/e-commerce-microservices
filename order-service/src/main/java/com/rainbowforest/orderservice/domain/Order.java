@@ -7,14 +7,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table (name = "orders")
+@Table(name = "orders")
 public class Order {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column (name = "ordered_date")
+    @Column(name = "ordered_date")
     @NotNull
     private LocalDate orderedDate;
 
@@ -22,17 +22,16 @@ public class Order {
     @NotNull
     private String status;
 
-    @Column (name = "total")
+    @Column(name = "total")
     private BigDecimal total;
 
-    @ManyToMany (cascade = CascadeType.ALL)
-    @JoinTable (name = "cart" , joinColumns = @JoinColumn(name = "order_id"), inverseJoinColumns = @JoinColumn (name = "item_id"))
+    @ManyToMany(cascade = CascadeType.ALL)
+    @JoinTable(name = "cart", joinColumns = @JoinColumn(name = "order_id"), inverseJoinColumns = @JoinColumn(name = "item_id"))
     private List<Item> items;
 
-    // 🌟 1. CỤC NÀY CỦA USER (Đã gom lại đứng liền với nhau)
-    @ManyToOne (cascade = CascadeType.ALL)
-    @JoinColumn (name = "user_id")
-    private User user;
+    @Column(name = "user_id")
+    @NotNull
+    private Long userId;
 
     // 🌟 2. CỤC NÀY LÀ CÁC THÔNG TIN GIAO HÀNG (Đứng riêng biệt ở dưới)
     @Column(name = "full_name", columnDefinition = "nvarchar(255)")
@@ -49,10 +48,9 @@ public class Order {
 
     @Column(name = "payment_method", length = 50)
     private String paymentMethod;
-    
-    
+
     public Order() {
-        
+
     }
 
     public Long getId() {
@@ -95,14 +93,14 @@ public class Order {
         this.items = items;
     }
 
-    public User getUser() {
-        return user;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
-    
+
     public String getFullName() {
         return fullName;
     }

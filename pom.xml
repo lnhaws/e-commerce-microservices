@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.rainbowforest</groupId>
+	<artifactId>e-commerce-microservices-main</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>e-commerce-microservices-main</name>
+
+	<modules>
+		<module>api-gateway</module>
+		<module>category-service</module>
+		<module>eureka-server</module>
+		<module>order-service</module>
+		<module>payment-service</module>
+		<module>product-catalog-service</module>
+		<module>product-recommendation-service</module>
+		<module>user-service</module>
+	</modules>
+</project>

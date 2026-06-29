@@ -18,8 +18,8 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    public List<Recommendation> getAllRecommendationByProductName(String productName) {
-        return recommendationRepository.findAllRatingByProductName(productName);
+    public List<Recommendation> getAllRecommendationByProductId(Long productId) {
+        return recommendationRepository.findAllRatingByProductId(productId);
     }
 
     @Override
@@ -27,8 +27,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         recommendationRepository.deleteById(id);
     }
 
-	@Override
-	public Recommendation getRecommendationById(Long recommendationId) {
-		return recommendationRepository.getOne(recommendationId);
-	}
+    @Override
+    public Recommendation getRecommendationById(Long recommendationId) {
+        return recommendationRepository.findById(recommendationId).orElse(null);
+    }
 }

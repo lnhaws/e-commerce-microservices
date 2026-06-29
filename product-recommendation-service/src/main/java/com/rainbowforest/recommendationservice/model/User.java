@@ -1,12 +1,15 @@
 package com.rainbowforest.recommendationservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import lombok.NoArgsConstructor;
 import javax.persistence.*;
 import java.util.List;
 
 @Entity
 @Table (name = "users")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
 
     @Id

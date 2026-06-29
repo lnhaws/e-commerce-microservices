@@ -2,34 +2,34 @@ package com.rainbowforest.recommendationservice.model;
 
 import lombok.NoArgsConstructor;
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 
 @Entity
-@Table (name = "recommendation")
+@Table(name = "recommendation")
 public class Recommendation {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column (name = "rating")
+    @Column(name = "rating")
     private int rating;
 
-    @ManyToOne (cascade = CascadeType.ALL)
-    @JoinColumn (name = "product_id")
+    @Column(name = "product_id")
+    @NotNull
+    private Long productId;
 
-    private Product product;
+    @Column(name = "user_id")
+    @NotNull
+    private Long userId;
 
-    @ManyToOne (cascade = CascadeType.ALL)
-    @JoinColumn (name = "user_id")
-    private User user;
-    
     public Recommendation() {
-	
-	}
 
-	public Recommendation(int rating, Product product, User user) {
+    }
+
+    public Recommendation(int rating, long productId, long userId) {
         this.rating = rating;
-        this.product = product;
-        this.user = user;
+        this.productId = productId;
+        this.userId = userId;
     }
 
     public void setId(Long id) {
@@ -48,19 +48,19 @@ public class Recommendation {
         this.rating = rating;
     }
 
-    public Product getProduct() {
-        return product;
+    public Long getProductId() {
+        return productId;
     }
 
-    public void setProduct(Product product) {
-        this.product = product;
+    public void setProductId(Long productId) {
+        this.productId = productId;
     }
 
-    public User getUser() {
-        return user;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

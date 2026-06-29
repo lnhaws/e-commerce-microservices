@@ -2,6 +2,7 @@ package com.rainbowforest.orderservice.service;
 
 import com.rainbowforest.orderservice.domain.Item;
 import com.rainbowforest.orderservice.domain.Product;
+import com.rainbowforest.orderservice.dto.ItemResponseDTO;
 import com.rainbowforest.orderservice.feignclient.ProductClient;
 import com.rainbowforest.orderservice.redis.CartRedisRepository;
 import com.rainbowforest.orderservice.utilities.CartUtilities;
@@ -24,23 +25,51 @@ public class CartServiceImpl implements CartService {
     @Override
     public void addItemToCart(String cartId, Long productId, Integer quantity) {
         Product product = productClient.getProductById(productId);
-        Item item = new Item(quantity,product, CartUtilities.getSubTotalForItem(product,quantity));
+        Item item = new Item();
+        item.setQuantity(quantity);
+        item.setProductId(productId);
+        item.setSubTotal(CartUtilities.getSubTotalForItem(product, quantity));
         cartRedisRepository.addItemToCart(cartId, item);
     }
 
     @Override
     public List<Object> getCart(String cartId) {
-        return (List<Object>)cartRedisRepository.getCart(cartId, Item.class);
+        List<Item> items = (List<Item>)(List<?>) cartRedisRepository.getCart(cartId, Item.class);
+        List<Object> response = new ArrayList<>();
+        
+        if (items != null) {
+            for (Item item : items) {
+                com.rainbowforest.orderservice.dto.ItemResponseDTO dto = new com.rainbowforest.orderservice.dto.ItemResponseDTO();
+                dto.setId(item.getId());
+                dto.setQuantity(item.getQuantity());
+                dto.setSubTotal(item.getSubTotal());
+                
+                try {
+                    Product product = productClient.getProductById(item.getProductId());
+                    dto.setProduct(product);
+                } catch (Exception e) {
+                    System.out.println("Lỗi gọi Product Service: " + e.getMessage());
+                    Product fallback = new Product();
+                    fallback.setId(item.getProductId());
+                    fallback.setProductName("Sản phẩm không xác định");
+                    fallback.setPrice(java.math.BigDecimal.ZERO);
+                    dto.setProduct(fallback);
+                }
+                response.add(dto);
+            }
+        }
+        return response;
     }
 
     @Override
     public void changeItemQuantity(String cartId, Long productId, Integer quantity) {
         List<Item> cart = (List)cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProduct().getId()).equals(productId)){
+            if((item.getProductId()).equals(productId)){
                 cartRedisRepository.deleteItemFromCart(cartId, item);
                 item.setQuantity(quantity);
-                item.setSubTotal(CartUtilities.getSubTotalForItem(item.getProduct(),quantity));
+                Product product = productClient.getProductById(productId);
+                item.setSubTotal(CartUtilities.getSubTotalForItem(product, quantity));
                 cartRedisRepository.addItemToCart(cartId, item);
             }
         }
@@ -50,7 +79,7 @@ public class CartServiceImpl implements CartService {
     public void deleteItemFromCart(String cartId, Long productId) {
         List<Item> cart = (List) cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProduct().getId()).equals(productId)){
+            if((item.getProductId()).equals(productId)){
                 cartRedisRepository.deleteItemFromCart(cartId, item);
             }
         }
@@ -60,7 +89,7 @@ public class CartServiceImpl implements CartService {
     public boolean checkIfItemIsExist(String cartId, Long productId) {
         List<Item> cart = (List) cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProduct().getId()).equals(productId)){
+            if((item.getProductId()).equals(productId)){
                 return true;
             }
         }
@@ -82,29 +111,27 @@ public class CartServiceImpl implements CartService {
     public void accumulateItemQuantity(String cartId, Long productId, Integer quantityToAdd) {
         List<Item> cart = (List)cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProduct().getId()).equals(productId)){
-                // Xóa món cũ đi
+            if((item.getProductId()).equals(productId)){
                 cartRedisRepository.deleteItemFromCart(cartId, item);
                 
-                // Cộng dồn số cũ với số lượng mới truyền vào
                 int newQuantity = item.getQuantity() + quantityToAdd;
                 item.setQuantity(newQuantity);
-                item.setSubTotal(CartUtilities.getSubTotalForItem(item.getProduct(), newQuantity));
+                Product product = productClient.getProductById(productId);
+                item.setSubTotal(CartUtilities.getSubTotalForItem(product, newQuantity));
                 
-                // Lưu lại món mới đã được update số lượng
                 cartRedisRepository.addItemToCart(cartId, item);
-                break; // Tìm thấy rồi thì thoát vòng lặp cho nhẹ máy
+                break; 
             }
         }
     }
+
     @Override
     public List<Item> getSelectedItemsFromCart(String cartId, List<Long> productIds) {
         List<Item> cart = (List)cartRedisRepository.getCart(cartId, Item.class);
         List<Item> selectedItems = new ArrayList<>();
         if (cart != null && productIds != null) {
             for (Item item : cart) {
-                // Nếu ID của món hàng nằm trong danh sách được tick chọn
-                if (productIds.contains(item.getProduct().getId())) {
+                if (productIds.contains(item.getProductId())) {
                     selectedItems.add(item);
                 }
             }
@@ -117,7 +144,7 @@ public class CartServiceImpl implements CartService {
         List<Item> cart = (List)cartRedisRepository.getCart(cartId, Item.class);
         if (cart != null && productIds != null) {
             for (Item item : cart) {
-                if (productIds.contains(item.getProduct().getId())) {
+                if (productIds.contains(item.getProductId())) {
                     cartRedisRepository.deleteItemFromCart(cartId, item);
                 }
             }
@@ -126,51 +153,40 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void mergeCart(String guestCartId, String userCartId) {
-        // 1. Lấy danh sách sản phẩm từ giỏ Guest
         List<Item> guestCart = (List) cartRedisRepository.getCart(guestCartId, Item.class);
         
-        // Nếu giỏ khách vãng lai trống thì không cần làm gì cả, kết thúc luôn
         if (guestCart == null || guestCart.isEmpty()) {
             return;
         }
 
-        // Lấy danh sách sản phẩm từ giỏ User hiện tại
         List<Item> userCart = (List) cartRedisRepository.getCart(userCartId, Item.class);
-
-        // 2. Dùng Map để xử lý gộp nhanh O(n) (Key là ProductId, Value là Item)
         Map<Long, Item> cartMap = new HashMap<>();
 
-        // Bỏ toàn bộ đồ của User hiện tại vào Map trước
         if (userCart != null) {
             for (Item item : userCart) {
-                cartMap.put(item.getProduct().getId(), item);
+                cartMap.put(item.getProductId(), item);
             }
         }
 
-        // 3. Duyệt giỏ Guest để gộp vào Map
         for (Item guestItem : guestCart) {
-            Long productId = guestItem.getProduct().getId();
+            Long productId = guestItem.getProductId();
             
             if (cartMap.containsKey(productId)) {
-                // TRƯỜNG HỢP TRÙNG ID: Cộng dồn số lượng và tính lại tiền
                 Item existingItem = cartMap.get(productId);
                 int newQuantity = existingItem.getQuantity() + guestItem.getQuantity();
                 existingItem.setQuantity(newQuantity);
-                existingItem.setSubTotal(CartUtilities.getSubTotalForItem(existingItem.getProduct(), newQuantity));
+                Product product = productClient.getProductById(productId);
+                existingItem.setSubTotal(CartUtilities.getSubTotalForItem(product, newQuantity));
             } else {
-                // TRƯỜNG HỢP MÓN MỚI: Thêm thẳng vào Map
                 cartMap.put(productId, guestItem);
             }
         }
 
-        // 4. Lưu lại giỏ hàng User mới vào Redis
-        // Xóa sạch giỏ User cũ đi để ghi đè cho an toàn
         cartRedisRepository.deleteCart(userCartId);
         for (Item mergedItem : cartMap.values()) {
             cartRedisRepository.addItemToCart(userCartId, mergedItem);
         }
 
-        // 5. Dọn dẹp bộ nhớ: Xóa sạch giỏ Guest sau khi gộp xong
         cartRedisRepository.deleteCart(guestCartId);
     }
 }

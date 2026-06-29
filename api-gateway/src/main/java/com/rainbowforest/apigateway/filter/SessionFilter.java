@@ -37,7 +37,7 @@ public class SessionFilter extends ZuulFilter {
         RequestContext ctx = RequestContext.getCurrentContext();
         HttpSession httpSession = ctx.getRequest().getSession();
         Session session = sessionRepository.findById(httpSession.getId());
-        ctx.addZuulRequestHeader("Cookie",httpSession.getId());
+        ctx.addZuulRequestHeader("Cookie", "SESSION=" + httpSession.getId());
         logger.info(httpSession.getId());
         return null;
     }
