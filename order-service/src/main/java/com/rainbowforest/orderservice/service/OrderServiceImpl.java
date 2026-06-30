@@ -80,7 +80,8 @@ public class OrderServiceImpl implements OrderService {
         dto.setPhoneNumber(order.getPhoneNumber());
         dto.setNotes(order.getNotes());
         dto.setPaymentMethod(order.getPaymentMethod());
-
+        dto.setUserId(order.getUserId());
+        
         try {
             dto.setUser(userClient.getUserById(order.getUserId()));
         } catch (Exception e) {

@@ -10,7 +10,8 @@ public class OrderResponseDTO {
     private LocalDate orderedDate;
     private String status;
     private BigDecimal total;
-    private User user; // Chứa thông tin User lấy từ User Service
+    private User user;
+    private Long userId;
     private List<ItemResponseDTO> items;
     
     // Thông tin giao hàng
@@ -21,6 +22,8 @@ public class OrderResponseDTO {
     private String paymentMethod;
 
     // Getter và Setter
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public LocalDate getOrderedDate() { return orderedDate; }

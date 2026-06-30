@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 public class ProductController {
@@ -32,12 +33,8 @@ public class ProductController {
                 HttpStatus.NOT_FOUND);       
     }
 
-    // ----------------------------------------------------
-    // HÀM ĐÃ SỬA: Đổi từ tìm theo chữ (category) sang ID (categoryId)
-    // ----------------------------------------------------
     @GetMapping(value = "/products", params = "categoryId")
     public ResponseEntity<List<Product>> getAllProductByCategoryId(@RequestParam ("categoryId") Long categoryId){
-        // Gọi đúng hàm mới mà bạn đã tạo bên Service
         List<Product> products = productService.getAllProductByCategoryId(categoryId);
         if(!products.isEmpty()) {
             return new ResponseEntity<List<Product>>(
@@ -48,6 +45,26 @@ public class ProductController {
         return new ResponseEntity<List<Product>>(
                 headerGenerator.getHeadersForError(),
                 HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping("/products/category/{categoryId}/related/{excludeId}")
+    public ResponseEntity<List<Product>> getRelatedProducts(
+            @PathVariable("categoryId") Long categoryId, 
+            @PathVariable("excludeId") Long excludeId) {
+        
+        List<Product> allInCategory = productService.getAllProductByCategoryId(categoryId);
+        
+        if (allInCategory == null || allInCategory.isEmpty()) {
+            return new ResponseEntity<>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
+        }
+
+        // Dùng Stream lọc bỏ sản phẩm hiện tại và chỉ lấy đúng 4 cái ném về Frontend
+        List<Product> related = allInCategory.stream()
+                .filter(p -> p.getId() != excludeId)
+                .limit(4) 
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(related, headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
     }
 
     @GetMapping (value = "/products/{id}")

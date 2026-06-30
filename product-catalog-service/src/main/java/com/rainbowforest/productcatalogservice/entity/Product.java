@@ -26,8 +26,8 @@ public class Product {
     private BigDecimal price;
 
     @Nationalized
-    @Column(name = "discription", columnDefinition = "nvarchar(max)")
-    private String discription;
+    @Column(name = "description", columnDefinition = "nvarchar(max)")
+    private String description;
 
     @Column(name = "category_id")
     @NotNull
@@ -67,12 +67,12 @@ public class Product {
         this.price = price;
     }
 
-    public String getDiscription() {
-        return discription;
+    public String getDescription() {
+        return description;
     }
 
-    public void setDiscription(String discription) {
-        this.discription = discription;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Long getCategoryId() {

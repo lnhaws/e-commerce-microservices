@@ -98,7 +98,7 @@ public class AdminProductController {
 
                 existingProduct.setProductName(productDetails.getProductName());
                 existingProduct.setPrice(productDetails.getPrice());
-                existingProduct.setDiscription(productDetails.getDiscription());
+                existingProduct.setDescription(productDetails.getDescription());
                 existingProduct.setAvailability(productDetails.getAvailability());
                 
                 // Lưu đè lại vào cơ sở dữ liệu

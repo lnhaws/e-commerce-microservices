@@ -56,10 +56,11 @@ public class OrderController {
             try {
                 orderService.saveOrder(order);
 
-                // 🌟 FIX BUG 1: CHỈ XÓA GIỎ HÀNG NẾU LÀ THANH TOÁN TIỀN MẶT (COD)
-                if ("COD".equalsIgnoreCase(orderRequest.getPaymentMethod())) {
-                    cartService.deleteSelectedItemsFromCart(cartId, orderRequest.getSelectedProductIds());
-                }
+            Order savedOrder = orderService.saveOrder(order);
+
+            cartService.deleteSelectedItemsFromCart(cartId, orderRequest.getSelectedProductIds());
+
+            OrderResponseDTO responseDTO = orderService.getOrderDetails(savedOrder.getId());
 
                 return new ResponseEntity<Order>(
                         order,
