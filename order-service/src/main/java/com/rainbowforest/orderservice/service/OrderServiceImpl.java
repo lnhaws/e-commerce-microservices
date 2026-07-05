@@ -31,7 +31,19 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order saveOrder(Order order) {
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        if (savedOrder.getItems() != null) {
+            for (Item item : savedOrder.getItems()) {
+                try {
+                    productClient.deductInventory(item.getProductId(), item.getVariantId(), item.getQuantity());
+                } catch (Exception e) {
+                    System.out.println("Lỗi khi trừ kho sản phẩm ID " + item.getProductId() + ": " + e.getMessage());
+                }
+            }
+        }
+        
+        return savedOrder;
     }
 
     @Override

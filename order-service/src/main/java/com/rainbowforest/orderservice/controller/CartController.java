@@ -29,9 +29,11 @@ public class CartController {
                 HttpStatus.OK);
     }
 
+    // 🌟 ĐÃ SỬA: Hứng thêm variantId từ Frontend gửi xuống
     @PostMapping(value = "/cart", params = {"productId", "quantity"})
     public ResponseEntity<List<Object>> addItemToCart(
             @RequestParam("productId") Long productId,
+            @RequestParam(value = "variantId", required = false) Long variantId, // Bắt biến thể ở đây
             @RequestParam("quantity") Integer quantity,
             @RequestHeader(value = "Cart-Id") String cartId,
             HttpServletRequest request) {
@@ -39,13 +41,14 @@ public class CartController {
         List<Object> cart = cartService.getCart(cartId);
         if(cart != null) {
             if(cart.isEmpty()){
-                cartService.addItemToCart(cartId, productId, quantity);
+                // Chú ý: Ông sẽ phải vào file CartService sửa thêm tham số variantId cho hàm này
+                cartService.addItemToCart(cartId, productId, variantId, quantity); 
             } else {
-                if(cartService.checkIfItemIsExist(cartId, productId)){
-                    // Dùng hàm cộng dồn thay vì ghi đè
-                    cartService.accumulateItemQuantity(cartId, productId, quantity);
+                // Chú ý: Hàm check này giờ phải check cả productId VÀ variantId (Khác khối lượng là 2 dòng khác nhau)
+                if(cartService.checkIfItemIsExist(cartId, productId, variantId)){ 
+                    cartService.accumulateItemQuantity(cartId, productId, variantId, quantity);
                 } else {
-                    cartService.addItemToCart(cartId, productId, quantity);
+                    cartService.addItemToCart(cartId, productId, variantId, quantity);
                 }
             }
             
@@ -59,13 +62,15 @@ public class CartController {
                 HttpStatus.BAD_REQUEST);
     }
 
-    @DeleteMapping(value = "/cart", params = "productId")
+    // 🌟 ĐÃ SỬA LẠI DELETE CHO CHUẨN
+    @DeleteMapping(value = "/cart", params = {"productId"})
     public ResponseEntity<Void> removeItemFromCart(
             @RequestParam("productId") Long productId,
+            @RequestParam(value = "variantId", required = false) Long variantId,
             @RequestHeader(value = "Cart-Id") String cartId){
         List<Object> cart = cartService.getCart(cartId);
         if(cart != null) {
-            cartService.deleteItemFromCart(cartId, productId);
+            cartService.deleteItemFromCart(cartId, productId, variantId); // Nhớ thêm variantId vào Service
             return new ResponseEntity<Void>(
                     headerGenerator.getHeadersForSuccessGetMethod(),
                     HttpStatus.OK);
@@ -80,10 +85,7 @@ public class CartController {
             @RequestParam("guestCartId") String guestCartId,
             @RequestParam("userCartId") String userCartId) { 
         try {
-            // Gọi tầng Service để xử lý thuật toán gộp đồ
             cartService.mergeCart(guestCartId, userCartId);
-            
-            // Trả về JSON {"message": "Merge success"} cho Frontend
             return new ResponseEntity<>(
                     Collections.singletonMap("message", "Merge success"), 
                     headerGenerator.getHeadersForSuccessGetMethod(), 

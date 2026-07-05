@@ -1,6 +1,8 @@
 package com.rainbowforest.productcatalogservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import org.hibernate.annotations.Nationalized;
 
 import javax.persistence.*;
@@ -22,8 +24,7 @@ public class Product {
     private String productName;
 
     @Column(name = "price")
-    @NotNull
-    private BigDecimal price;
+    private BigDecimal price = BigDecimal.ZERO;
 
     @Nationalized
     @Column(name = "description", columnDefinition = "nvarchar(max)")
@@ -34,8 +35,7 @@ public class Product {
     private Long categoryId;
 
     @Column(name = "availability")
-    @NotNull
-    private int availability;
+    private int availability = 0;
 
     @Column(name = "image_url")
     private String imageUrl;
@@ -97,5 +97,16 @@ public class Product {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
+    private java.util.List<ProductVariant> variants;
+
+    public java.util.List<ProductVariant> getVariants() {
+        return variants;
+    }
+    public void setVariants(java.util.List<ProductVariant> variants) {
+        this.variants = variants;
     }
 }

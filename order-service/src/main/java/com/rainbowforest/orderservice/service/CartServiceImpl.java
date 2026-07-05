@@ -2,16 +2,15 @@ package com.rainbowforest.orderservice.service;
 
 import com.rainbowforest.orderservice.domain.Item;
 import com.rainbowforest.orderservice.domain.Product;
-import com.rainbowforest.orderservice.dto.ItemResponseDTO;
 import com.rainbowforest.orderservice.feignclient.ProductClient;
 import com.rainbowforest.orderservice.redis.CartRedisRepository;
-import com.rainbowforest.orderservice.utilities.CartUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.math.BigDecimal;
 
 @Service
 public class CartServiceImpl implements CartService {
@@ -22,13 +21,37 @@ public class CartServiceImpl implements CartService {
     @Autowired
     private CartRedisRepository cartRedisRepository;
 
+    // 🌟 HÀM TIỆN ÍCH TỰ VIẾT: Lấy giá chính xác dựa trên Variant ID
+    private BigDecimal calculateSubTotal(Product product, Long variantId, int quantity) {
+        if (product == null) return BigDecimal.ZERO;
+        BigDecimal priceToUse = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
+
+        if (variantId != null && product.getVariants() != null) {
+            // Ép kiểu ép buộc bằng Stream/Map ở đây hơi lằng nhằng vì khác project, 
+            // anh em dùng vòng for truyền thống dò tìm variant khớp ID cho chắc cốp.
+            for (Object vObj : product.getVariants()) {
+                try {
+                    // Dùng reflection/Map vì JSON parse sang có thể bị thành Map
+                    Map<String, Object> variantMap = (Map<String, Object>) vObj;
+                    Long vId = Long.valueOf(variantMap.get("id").toString());
+                    if (vId.equals(variantId)) {
+                        priceToUse = new BigDecimal(variantMap.get("price").toString());
+                        break;
+                    }
+                } catch (Exception e) {}
+            }
+        }
+        return priceToUse.multiply(new BigDecimal(quantity));
+    }
+
     @Override
-    public void addItemToCart(String cartId, Long productId, Integer quantity) {
+    public void addItemToCart(String cartId, Long productId, Long variantId, Integer quantity) {
         Product product = productClient.getProductById(productId);
         Item item = new Item();
         item.setQuantity(quantity);
         item.setProductId(productId);
-        item.setSubTotal(CartUtilities.getSubTotalForItem(product, quantity));
+        item.setVariantId(variantId); // 🌟 Set ID biến thể
+        item.setSubTotal(calculateSubTotal(product, variantId, quantity));
         cartRedisRepository.addItemToCart(cartId, item);
     }
 
@@ -47,12 +70,33 @@ public class CartServiceImpl implements CartService {
                 try {
                     Product product = productClient.getProductById(item.getProductId());
                     dto.setProduct(product);
+                    
+                    // Gắn thêm thông tin Variant vào DTO để Frontend lấy tên hiển thị
+                    if (item.getVariantId() != null && product.getVariants() != null) {
+                        for (Object vObj : product.getVariants()) {
+                            try {
+                                Map<String, Object> variantMap = (Map<String, Object>) vObj;
+                                Long vId = Long.valueOf(variantMap.get("id").toString());
+                                if (vId.equals(item.getVariantId())) {
+                                    // Hack tạm: Ném trọng lượng vào description hoặc ghi đè productName để hiển thị
+                                    String weight = variantMap.get("weight").toString() + variantMap.get("unit").toString();
+                                    product.setProductName(product.getProductName() + " - " + weight);
+                                    
+                                    // Ghi đè lại ảnh nếu biến thể có ảnh riêng
+                                    if(variantMap.get("imageUrl") != null) {
+                                         product.setImageUrl(variantMap.get("imageUrl").toString());
+                                    }
+                                    break;
+                                }
+                            } catch (Exception e) {}
+                        }
+                    }
+
                 } catch (Exception e) {
-                    System.out.println("Lỗi gọi Product Service: " + e.getMessage());
                     Product fallback = new Product();
                     fallback.setId(item.getProductId());
                     fallback.setProductName("Sản phẩm không xác định");
-                    fallback.setPrice(java.math.BigDecimal.ZERO);
+                    fallback.setPrice(BigDecimal.ZERO);
                     dto.setProduct(fallback);
                 }
                 response.add(dto);
@@ -62,34 +106,46 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public void changeItemQuantity(String cartId, Long productId, Integer quantity) {
+    public void changeItemQuantity(String cartId, Long productId, Long variantId, Integer quantity) {
         List<Item> cart = (List)cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProductId()).equals(productId)){
+            // 🌟 Check kỹ cả 2 ID
+            boolean matchProduct = item.getProductId().equals(productId);
+            boolean matchVariant = (variantId == null && item.getVariantId() == null) || (variantId != null && variantId.equals(item.getVariantId()));
+            
+            if(matchProduct && matchVariant){
                 cartRedisRepository.deleteItemFromCart(cartId, item);
                 item.setQuantity(quantity);
                 Product product = productClient.getProductById(productId);
-                item.setSubTotal(CartUtilities.getSubTotalForItem(product, quantity));
+                item.setSubTotal(calculateSubTotal(product, variantId, quantity));
                 cartRedisRepository.addItemToCart(cartId, item);
+                break;
             }
         }
     }
 
     @Override
-    public void deleteItemFromCart(String cartId, Long productId) {
+    public void deleteItemFromCart(String cartId, Long productId, Long variantId) {
         List<Item> cart = (List) cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProductId()).equals(productId)){
+            boolean matchProduct = item.getProductId().equals(productId);
+            boolean matchVariant = (variantId == null && item.getVariantId() == null) || (variantId != null && variantId.equals(item.getVariantId()));
+            
+            if(matchProduct && matchVariant){
                 cartRedisRepository.deleteItemFromCart(cartId, item);
+                break;
             }
         }
     }
 
     @Override
-    public boolean checkIfItemIsExist(String cartId, Long productId) {
+    public boolean checkIfItemIsExist(String cartId, Long productId, Long variantId) {
         List<Item> cart = (List) cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProductId()).equals(productId)){
+            boolean matchProduct = item.getProductId().equals(productId);
+            boolean matchVariant = (variantId == null && item.getVariantId() == null) || (variantId != null && variantId.equals(item.getVariantId()));
+            
+            if(matchProduct && matchVariant){
                 return true;
             }
         }
@@ -98,8 +154,7 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public List<Item> getAllItemsFromCart(String cartId) {
-        List<Item> items = (List)cartRedisRepository.getCart(cartId, Item.class);
-        return items;
+        return (List)cartRedisRepository.getCart(cartId, Item.class);
     }
 
     @Override
@@ -108,16 +163,19 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public void accumulateItemQuantity(String cartId, Long productId, Integer quantityToAdd) {
+    public void accumulateItemQuantity(String cartId, Long productId, Long variantId, Integer quantityToAdd) {
         List<Item> cart = (List)cartRedisRepository.getCart(cartId, Item.class);
         for(Item item : cart){
-            if((item.getProductId()).equals(productId)){
+            boolean matchProduct = item.getProductId().equals(productId);
+            boolean matchVariant = (variantId == null && item.getVariantId() == null) || (variantId != null && variantId.equals(item.getVariantId()));
+            
+            if(matchProduct && matchVariant){
                 cartRedisRepository.deleteItemFromCart(cartId, item);
                 
                 int newQuantity = item.getQuantity() + quantityToAdd;
                 item.setQuantity(newQuantity);
                 Product product = productClient.getProductById(productId);
-                item.setSubTotal(CartUtilities.getSubTotalForItem(product, newQuantity));
+                item.setSubTotal(calculateSubTotal(product, variantId, newQuantity));
                 
                 cartRedisRepository.addItemToCart(cartId, item);
                 break; 
@@ -154,31 +212,32 @@ public class CartServiceImpl implements CartService {
     @Override
     public void mergeCart(String guestCartId, String userCartId) {
         List<Item> guestCart = (List) cartRedisRepository.getCart(guestCartId, Item.class);
-        
-        if (guestCart == null || guestCart.isEmpty()) {
-            return;
-        }
+        if (guestCart == null || guestCart.isEmpty()) return;
 
         List<Item> userCart = (List) cartRedisRepository.getCart(userCartId, Item.class);
-        Map<Long, Item> cartMap = new HashMap<>();
+        
+        // Dùng chuỗi "productId-variantId" làm khóa để gộp đồ chính xác
+        Map<String, Item> cartMap = new HashMap<>();
 
         if (userCart != null) {
             for (Item item : userCart) {
-                cartMap.put(item.getProductId(), item);
+                String key = item.getProductId() + "-" + (item.getVariantId() != null ? item.getVariantId() : "0");
+                cartMap.put(key, item);
             }
         }
 
         for (Item guestItem : guestCart) {
-            Long productId = guestItem.getProductId();
+            String key = guestItem.getProductId() + "-" + (guestItem.getVariantId() != null ? guestItem.getVariantId() : "0");
             
-            if (cartMap.containsKey(productId)) {
-                Item existingItem = cartMap.get(productId);
+            if (cartMap.containsKey(key)) {
+                Item existingItem = cartMap.get(key);
                 int newQuantity = existingItem.getQuantity() + guestItem.getQuantity();
                 existingItem.setQuantity(newQuantity);
-                Product product = productClient.getProductById(productId);
-                existingItem.setSubTotal(CartUtilities.getSubTotalForItem(product, newQuantity));
+                
+                Product product = productClient.getProductById(guestItem.getProductId());
+                existingItem.setSubTotal(calculateSubTotal(product, guestItem.getVariantId(), newQuantity));
             } else {
-                cartMap.put(productId, guestItem);
+                cartMap.put(key, guestItem);
             }
         }
 

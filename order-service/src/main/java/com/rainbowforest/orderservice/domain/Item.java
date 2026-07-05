@@ -31,18 +31,24 @@ public class Item {
     @NotNull
     private Long productId;
 
+    @Column(name = "variant_id")
+    private Long variantId;
+
     @ManyToMany(mappedBy = "items")
     @JsonIgnore
     private List<Order> orders;
 
     public Item() {}
 
-    public Item(@NotNull int quantity, long productId, BigDecimal subTotal) {
+    // 🌟 CẬP NHẬT CONSTRUCTOR: Nhận thêm variantId
+    public Item(@NotNull int quantity, long productId, Long variantId, BigDecimal subTotal) {
         this.quantity = quantity;
         this.productId = productId;
+        this.variantId = variantId;
         this.subTotal = subTotal;
     }
 
+    // --- GETTER VÀ SETTER ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public int getQuantity() { return quantity; }
@@ -51,6 +57,11 @@ public class Item {
     public void setSubTotal(BigDecimal subTotal) { this.subTotal = subTotal; }
     public Long getProductId() { return productId; }
     public void setProductId(Long productId) { this.productId = productId; }
+    
+    // 🌟 THÊM GETTER/SETTER CHO VARIANT
+    public Long getVariantId() { return variantId; }
+    public void setVariantId(Long variantId) { this.variantId = variantId; }
+    
     public List<Order> getOrders() { return orders; }
     public void setOrders(List<Order> orders) { this.orders = orders; }
 }

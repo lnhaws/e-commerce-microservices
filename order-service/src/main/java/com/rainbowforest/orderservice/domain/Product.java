@@ -39,4 +39,15 @@ public class Product {
     public void setPrice(BigDecimal price) { this.price = price; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    @Transient
+    private java.util.List<Object> variants;
+
+    public java.util.List<Object> getVariants() {
+        return variants;
+    }
+
+    public void setVariants(java.util.List<Object> variants) {
+        this.variants = variants;
+    }
 }
