@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -67,7 +69,9 @@ public class UserController {
     }
 
     @PostMapping(value = "/users")
-    public ResponseEntity<User> addUser(@RequestBody User user, HttpServletRequest request) {
+    public ResponseEntity<User> addUser(
+            @Valid @RequestBody User user,
+            HttpServletRequest request) {
         if (user != null)
             try {
                 if (user.getRole() != null && user.getRole().getId() != null) {
@@ -139,13 +143,11 @@ public class UserController {
         return new ResponseEntity<User>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
     }
 
-    // 🌟 API DÀNH RIÊNG CHO USER: CẬP NHẬT THÔNG TIN CÁ NHÂN (PROFILE)
     @PutMapping(value = "/users/{id}/profile")
     public ResponseEntity<User> updateUserProfile(
             @PathVariable("id") Long id,
-            @RequestBody com.rainbowforest.userservice.entity.UserDetails profileDetails,
+            @Valid @RequestBody com.rainbowforest.userservice.entity.UserDetails profileDetails,
             HttpServletRequest request) {
-
         User existingUser = userService.getUserById(id);
         if (existingUser != null) {
             try {

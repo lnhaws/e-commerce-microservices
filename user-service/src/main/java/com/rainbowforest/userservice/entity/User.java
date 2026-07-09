@@ -1,7 +1,9 @@
 package com.rainbowforest.userservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 import javax.persistence.*;
 
 @Entity
@@ -14,15 +16,21 @@ public class User {
     private Long id;
 
     @Column (name = "user_name", nullable = false, unique = true, length = 50)
+    @NotBlank(message = "Tên đăng nhập không được để trống")
+    @Size(min = 4, message = "Tên đăng nhập phải có ít nhất 4 ký tự")
     private String userName;
+
     @Column (name = "user_password", nullable = false, length = 255)
+    @NotBlank(message = "Mật khẩu không được để trống")
+    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String userPassword;
-    @Column(name = "active")
-    // Đổi từ int sang Integer
+    
+	@Column(name = "active")
     private Integer active;
 
     @OneToOne (cascade = CascadeType.ALL)
     @JoinColumn (name = "user_details_id")
+    @Valid
     private UserDetails userDetails;
 
     @ManyToOne

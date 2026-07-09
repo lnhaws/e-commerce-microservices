@@ -2,6 +2,9 @@ package com.rainbowforest.userservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.*;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 
 @Entity
 @Table (name = "users_details")
@@ -12,12 +15,20 @@ public class UserDetails {
     private Long id;
 
     @Column (name = "first_name", nullable = false, length = 50)
+    @NotBlank(message = "Họ không được để trống")
     private String firstName;
+
     @Column (name = "last_name", nullable = false, length = 50)
+    @NotBlank(message = "Tên không được để trống")
     private String lastName;
+
     @Column (name = "email", nullable = false, unique = true, length = 50)
+    @NotBlank(message = "Email không được để trống")
+    @Email(message = "Email không đúng định dạng")
     private String email;
+
     @Column (name = "phone_number", length = 15)
+    @Pattern(regexp = "^$|^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không hợp lệ")
     private String phoneNumber;
     @Column (name = "street", length = 30)
     private String street;

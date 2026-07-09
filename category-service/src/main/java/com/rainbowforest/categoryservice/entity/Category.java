@@ -2,6 +2,7 @@ package com.rainbowforest.categoryservice.entity;
 
 import org.hibernate.annotations.Nationalized;
 import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "categories")
@@ -11,6 +12,7 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Tên danh mục không được để trống")
     @Nationalized
     @Column(name = "category_name", nullable = false, unique = true, columnDefinition = "nvarchar(255)")
     private String categoryName;
@@ -19,11 +21,9 @@ public class Category {
     @Column(name = "description", columnDefinition = "nvarchar(max)")
     private String description;
 
-    // Dùng Integer (đối tượng) để bắt được giá trị null, hỗ trợ tính năng Xóa mềm / Khóa danh mục
     @Column(name = "active")
     private Integer active;
 
-    // Constructor rỗng (Bắt buộc cho JPA)
     public Category() {}
 
     // Getters và Setters

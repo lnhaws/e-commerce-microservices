@@ -8,6 +8,8 @@ public class ItemResponseDTO {
     private int quantity;
     private BigDecimal subTotal;
     private Product product;
+    
+    private Long variantId;
 
     // Getter và Setter
     public Long getId() { return id; }
@@ -18,4 +20,8 @@ public class ItemResponseDTO {
     public void setSubTotal(BigDecimal subTotal) { this.subTotal = subTotal; }
     public Product getProduct() { return product; }
     public void setProduct(Product product) { this.product = product; }
+    
+    // 🌟 GETTER/SETTER CHO VARIANT ID
+    public Long getVariantId() { return variantId; }
+    public void setVariantId(Long variantId) { this.variantId = variantId; }
 }

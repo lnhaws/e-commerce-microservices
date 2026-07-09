@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 
 @RestController
     public class LoginController {
@@ -28,7 +29,9 @@ import javax.servlet.http.HttpServletRequest;
         private PasswordEncoder passwordEncoder;
 
         @PostMapping(value = "/login")
-        public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+        public ResponseEntity<?> authenticateUser(
+                @Valid @RequestBody LoginRequest loginRequest,
+                HttpServletRequest request) {
             try {
                 User existingUser = userService.getUserByName(loginRequest.getUserName());
 
@@ -36,9 +39,6 @@ import javax.servlet.http.HttpServletRequest;
                     return new ResponseEntity<>("Tài khoản không tồn tại!", headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND); 
                 }
 
-                // ----------------------------------------------------
-                // ĐÃ SỬA: DÙNG HÀM MATCHES CỦA BCRYPT ĐỂ SO SÁNH
-                // ----------------------------------------------------
                 if (!passwordEncoder.matches(loginRequest.getUserPassword(), existingUser.getUserPassword())) {
                     return new ResponseEntity<>("Sai mật khẩu!", headerGenerator.getHeadersForError(), HttpStatus.UNAUTHORIZED); 
                 }

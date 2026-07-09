@@ -2,6 +2,7 @@ package com.rainbowforest.orderservice.service;
 
 import com.rainbowforest.orderservice.domain.Item;
 import com.rainbowforest.orderservice.domain.Order;
+import com.rainbowforest.orderservice.domain.Product; // Đảm bảo có cái này
 import com.rainbowforest.orderservice.dto.ItemResponseDTO;
 import com.rainbowforest.orderservice.dto.OrderResponseDTO;
 import com.rainbowforest.orderservice.feignclient.ProductClient;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -22,7 +24,6 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private OrderRepository orderRepository;
 
-    // Nhúng Feign Client vào để gọi điện hỏi thông tin
     @Autowired
     private UserClient userClient;
 
@@ -56,7 +57,6 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findAll();
     }
 
-    // 🌟 HÀM MỚI: Lấy Entity Order từ DB lên, sau đó ghép nối dữ liệu thành DTO
     public OrderResponseDTO getOrderDetails(Long orderId) {
         Order order = getOrderById(orderId);
         if (order == null)
@@ -64,7 +64,6 @@ public class OrderServiceImpl implements OrderService {
         return mapToOrderResponseDTO(order);
     }
 
-    // 🌟 HÀM MỚI: Mapping toàn bộ danh sách Order thành DTO
     public List<OrderResponseDTO> getAllOrderDetails() {
         List<Order> orders = getAllOrders();
         return orders.stream().map(this::mapToOrderResponseDTO).collect(Collectors.toList());
@@ -73,14 +72,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderResponseDTO> getOrdersByUserId(Long userId) {
         List<Order> orders = orderRepository.findAllByUserId(userId);
-        // Map toàn bộ danh sách đơn hàng sang dạng DTO có đầy đủ thông tin trà/cafe từ
-        // Catalog Service
         return orders.stream()
                 .map(this::mapToOrderResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    // --- LOGIC GHÉP NỐI NẰM Ở ĐÂY ---
     private OrderResponseDTO mapToOrderResponseDTO(Order order) {
         OrderResponseDTO dto = new OrderResponseDTO();
         dto.setId(order.getId());
@@ -107,9 +103,31 @@ public class OrderServiceImpl implements OrderService {
                 itemDTO.setId(item.getId());
                 itemDTO.setQuantity(item.getQuantity());
                 itemDTO.setSubTotal(item.getSubTotal());
+                
+                itemDTO.setVariantId(item.getVariantId());
 
                 try {
-                    itemDTO.setProduct(productClient.getProductById(item.getProductId()));
+                    Product product = productClient.getProductById(item.getProductId());
+                    
+                    if (item.getVariantId() != null && product.getVariants() != null) {
+                        for (Object vObj : product.getVariants()) {
+                            try {
+                                Map<String, Object> variantMap = (Map<String, Object>) vObj;
+                                Long vId = Long.valueOf(variantMap.get("id").toString());
+                                if (vId.equals(item.getVariantId())) {
+                                    String weight = variantMap.get("weight").toString() + variantMap.get("unit").toString();
+                                    product.setProductName(product.getProductName() + " - " + weight);
+                                    
+                                    if(variantMap.get("imageUrl") != null) {
+                                         product.setImageUrl(variantMap.get("imageUrl").toString());
+                                    }
+                                    break;
+                                }
+                            } catch (Exception e) {}
+                        }
+                    }
+
+                    itemDTO.setProduct(product);
                 } catch (Exception e) {
                     System.out.println("Lỗi gọi Product Service: " + e.getMessage());
                 }

@@ -2,9 +2,9 @@ package com.rainbowforest.productcatalogservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-
 import org.hibernate.annotations.Nationalized;
-
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -20,7 +20,7 @@ public class Product {
 
     @Nationalized
     @Column(name = "product_name", columnDefinition = "nvarchar(255)")
-    @NotNull
+    @NotBlank(message = "Tên sản phẩm không được để trống")
     private String productName;
 
     @Column(name = "price")
@@ -99,8 +99,9 @@ public class Product {
         this.imageUrl = imageUrl;
     }
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference
+    @Valid //KÍCH HOẠT CASCADE VALIDATION (KIỂM TRA LỖI LỒNG NHAU)
     private java.util.List<ProductVariant> variants;
 
     public java.util.List<ProductVariant> getVariants() {

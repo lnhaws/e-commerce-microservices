@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
-
+import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,10 +33,6 @@ public class ProductController {
         }
         return currentPath + "/uploads/";
     }
-
-    // ==========================================
-    // CÁC API DÀNH CHO KHÁCH HÀNG (GET)
-    // ==========================================
 
     @GetMapping (value = "/products")
     public ResponseEntity<List<Product>> getAllProducts(){
@@ -114,20 +110,16 @@ public class ProductController {
                 HttpStatus.NOT_FOUND);
     }
 
-    // ==========================================
-    // 🌟 CÁC API DÀNH CHO ADMIN (THÊM/SỬA/XÓA)
-    // ==========================================
-
     @PostMapping("/admin/products")
-    // 🌟 ĐÃ SỬA: Thêm tham số HttpServletRequest request vào hàm
-    public ResponseEntity<Product> addProduct(@RequestBody Product product, HttpServletRequest request) {
+    public ResponseEntity<Product> addProduct(
+            @Valid @RequestBody Product product,
+            HttpServletRequest request) {
         
         if (product.getVariants() != null) {
             for (ProductVariant variant : product.getVariants()) {
                 variant.setProduct(product);
             }
         }
-        
         Product savedProduct = productService.addProduct(product);
         return new ResponseEntity<>(
                 savedProduct, 
@@ -136,27 +128,40 @@ public class ProductController {
         );
     }
 
-    @PutMapping("/admin/products/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable("id") Long id, @RequestBody Product product) {
+  @PutMapping("/admin/products/{id}")
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable("id") Long id, 
+            @Valid @RequestBody Product product) {
+        
         Product existingProduct = productService.getProductById(id);
         if (existingProduct == null) {
             return new ResponseEntity<>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
         }
-
-        // 1. Cập nhật thông tin cha
+        
         existingProduct.setProductName(product.getProductName());
         existingProduct.setCategoryId(product.getCategoryId());
         existingProduct.setDescription(product.getDescription());
-        existingProduct.setPrice(product.getPrice()); // Giữ tạm để code UI cũ không bị sập
-        existingProduct.setAvailability(product.getAvailability()); // Giữ tạm
+        existingProduct.setPrice(product.getPrice());
+        existingProduct.setAvailability(product.getAvailability());
 
-        // 2. Cập nhật danh sách con (Xóa khối lượng cũ, đắp khối lượng mới vào)
+        java.util.Map<Long, String> oldImages = new java.util.HashMap<>();
         if (existingProduct.getVariants() != null) {
+            for (ProductVariant oldVar : existingProduct.getVariants()) {
+                if (oldVar.getId() != null && oldVar.getImageUrl() != null) {
+                    oldImages.put(oldVar.getId(), oldVar.getImageUrl());
+                }
+            }
             existingProduct.getVariants().clear();
         }
+
         if (product.getVariants() != null) {
             for (ProductVariant variant : product.getVariants()) {
-                variant.setProduct(existingProduct); // Khai báo cha
+                variant.setProduct(existingProduct); 
+                
+                if (variant.getId() != null && oldImages.containsKey(variant.getId())) {
+                    variant.setImageUrl(oldImages.get(variant.getId()));
+                }
+                
                 existingProduct.getVariants().add(variant);
             }
         }
@@ -169,17 +174,12 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(@PathVariable("id") Long id) {
         Product product = productService.getProductById(id);
         if(product != null) {
-            productService.deleteProduct(id); // (Nếu hàm bên Service tên khác thì sửa lại)
+            productService.deleteProduct(id);
             return new ResponseEntity<>(headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
         }
         return new ResponseEntity<>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
     }
 
-    // ==========================================
-    // 🌟 API UPLOAD ẢNH RIÊNG CHO TỪNG KHỐI LƯỢNG
-    // ==========================================
-    
-    // 🌟 1. API UP ẢNH CHO SẢN PHẨM GỐC (LƯU LOCAL)
     @PostMapping("/admin/products/{productId}/image")
     public ResponseEntity<Product> uploadProductImage(
             @PathVariable("productId") Long productId,
@@ -208,7 +208,6 @@ public class ProductController {
         }
     }
 
-    // 🌟 2. API UP ẢNH CHO TỪNG BIẾN THỂ (LƯU LOCAL)
     @PostMapping("/admin/variants/{variantId}/image")
     public ResponseEntity<ProductVariant> uploadVariantImage(
             @PathVariable("variantId") Long variantId,
@@ -236,34 +235,41 @@ public class ProductController {
     }
 
     @PostMapping("/products/{id}/deduct")
-    public ResponseEntity<Void> deductInventory(
+    public ResponseEntity<?> deductInventory(
             @PathVariable("id") Long id,
             @RequestParam(value = "variantId", required = false) Long variantId,
             @RequestParam("quantity") int quantity) {
         
         Product product = productService.getProductById(id);
         if (product == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Sản phẩm không tồn tại", HttpStatus.NOT_FOUND);
         }
-
         if (variantId != null && product.getVariants() != null) {
-            // Tìm đúng cái biến thể khách mua để trừ kho
             for (ProductVariant variant : product.getVariants()) {
                 if (variant.getId().equals(variantId)) {
                     int currentStock = variant.getAvailability();
                     int newStock = currentStock - quantity;
-                    variant.setAvailability(newStock < 0 ? 0 : newStock);
+                    
+                    if (newStock < 0) {
+                        return new ResponseEntity<>("Không đủ số lượng trong kho!", HttpStatus.BAD_REQUEST);
+                    }
+                    
+                    variant.setAvailability(newStock);
                     break;
                 }
             }
         } else {
-            // Dành cho sản phẩm cũ không có biến thể
             int currentStock = product.getAvailability();
             int newStock = currentStock - quantity;
-            product.setAvailability(newStock < 0 ? 0 : newStock);
+            
+            if (newStock < 0) {
+                return new ResponseEntity<>("Không đủ số lượng trong kho!", HttpStatus.BAD_REQUEST);
+            }
+            
+            product.setAvailability(newStock);
         }
 
-        productService.addProduct(product); // Lưu cập nhật xuống DB
+        productService.addProduct(product);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 }

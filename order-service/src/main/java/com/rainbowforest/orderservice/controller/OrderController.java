@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import javax.validation.Valid;
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
@@ -34,11 +35,11 @@ public class OrderController {
     @Autowired
     private HeaderGenerator headerGenerator;
 
-    @PostMapping(value = "/order/{userId}")
+   @PostMapping(value = "/order/{userId}")
     public ResponseEntity<Order> saveOrder(
             @PathVariable("userId") Long userId,
             @RequestHeader(value = "Cart-Id") String cartId,
-            @RequestBody OrderRequestDTO orderRequest,
+            @Valid @RequestBody OrderRequestDTO orderRequest, 
             HttpServletRequest request) {
 
         List<Item> selectedItems = cartService.getSelectedItemsFromCart(cartId, orderRequest.getSelectedProductIds());
@@ -54,14 +55,9 @@ public class OrderController {
             order.setPaymentMethod(orderRequest.getPaymentMethod());
 
             try {
-                orderService.saveOrder(order);
-
-            Order savedOrder = orderService.saveOrder(order);
-
-            cartService.deleteSelectedItemsFromCart(cartId, orderRequest.getSelectedProductIds());
-
-            OrderResponseDTO responseDTO = orderService.getOrderDetails(savedOrder.getId());
-
+                Order savedOrder = orderService.saveOrder(order);
+                cartService.deleteSelectedItemsFromCart(cartId, orderRequest.getSelectedProductIds());
+                OrderResponseDTO responseDTO = orderService.getOrderDetails(savedOrder.getId());
                 return new ResponseEntity<Order>(
                         order,
                         headerGenerator.getHeadersForSuccessPostMethod(request, order.getId()),
@@ -73,7 +69,6 @@ public class OrderController {
                         HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
-
         return new ResponseEntity<Order>(
                 headerGenerator.getHeadersForError(),
                 HttpStatus.BAD_REQUEST);

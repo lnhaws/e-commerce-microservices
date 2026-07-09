@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.DecimalMin;
 
 @Entity
 @Table(name = "product_variants")
@@ -19,23 +21,26 @@ public class ProductVariant {
     private Product product;
 
     @Column(name = "weight")
-    @NotNull
-    private Integer weight; // Ví dụ: 250, 500, 1
+    @NotNull(message = "Trọng lượng không được bỏ trống")
+    @Min(value = 1, message = "Trọng lượng phải lớn hơn 0")
+    private Integer weight;
 
     @Column(name = "unit", length = 10)
-    @NotNull
-    private String unit; // Ví dụ: "g", "kg"
+    @NotNull(message = "Đơn vị không được bỏ trống")
+    private String unit;
 
     @Column(name = "price")
-    @NotNull
-    private BigDecimal price; // Giá riêng cho khối lượng này
+    @NotNull(message = "Giá bán không được bỏ trống")
+    @DecimalMin(value = "0.0", message = "Giá bán không được nhỏ hơn 0")
+    private BigDecimal price;
 
     @Column(name = "availability")
-    @NotNull
-    private int availability; // Số lượng tồn kho riêng của khối lượng này
+    @NotNull(message = "Số lượng tồn kho không được bỏ trống")
+    @Min(value = 0, message = "Số lượng tồn kho không được nhỏ hơn 0")
+    private int availability;
 
     @Column(name = "image_url")
-    private String imageUrl; // Ảnh tùy chọn, nếu NULL thì Frontend sẽ tự lấy ảnh gốc của Product
+    private String imageUrl;
 
     public ProductVariant() {
     }
